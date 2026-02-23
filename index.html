@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Web Multiband Simulator</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" href="style.css">
+  </head>
+
+  <body>
+    <div class="container">
+      <h1>Web Multiband Simulator</h1>
+      <p class="subtitle">
+        Reproduce radio time signals to sync radio-controlled watches.<br>
+        Please star the project on <a href="https://github.com/chuanjin-su/web-multiband" target="_blank" rel="noopener">GitHub</a> if you find it helpful!
+      </p>
+
+      <div class="controls">
+        <div class="control-row">
+          <label for="protocol-selector">Target Signal:</label>
+          <select id="protocol-selector"></select>
+          <button id="control-button">Start Transmitting</button>
+        </div>
+        <div class="control-row">
+          <div id="time">Ready to sync</div>
+        </div>
+        <div id="option"></div>
+      </div>
+
+      <div id="canvas-panel" class="canvas-container" style="display: none;">
+        <canvas id="canvas" width="1000" height="200"></canvas>
+      </div>
+
+      <div class="map-container">
+        <h2>Global Signal Coverage</h2>
+        <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: -5px;">
+          Radio-controlled clocks automatically synchronize to one of these regional longwave transmitters.
+        </p>
+
+        <img src="coverage.png" alt="Map of global atomic clock signal coverage" onerror="this.style.display='none'">
+
+        <div class="signal-grid">
+          <div class="signal-card"><strong>BPC</strong>🇨🇳 China<br>68.5 kHz</div>
+          <div class="signal-card"><strong>WWVB</strong>🇺🇸 USA<br>60 kHz</div>
+          <div class="signal-card"><strong>DCF77</strong>🇩🇪 Germany<br>77.5 kHz</div>
+          <div class="signal-card"><strong>MSF</strong>🇬🇧 UK<br>60 kHz</div>
+          <div class="signal-card"><strong>JJY</strong>🇯🇵 Japan<br>40 & 60 kHz</div>
+        </div>
+      </div>
+
+      <div class="instructions">
+        <h2>How to Use</h2>
+        <p>
+          Sync your computer's time with an accurate time source (e.g., <a href="https://time.is/" target="_blank" rel="noopener">time.is</a>, or a NTP server such as <a href="https://www.ntppool.org/" target="_blank" rel="noopener">pool.ntp.org</a>) to ensure the simulator transmits the correct time signals.
+        </p>
+        <p>
+          Use a headphone or the computer's built-in speaker. Maximize the volume for better reception, and place your radio-controlled clock close to the speaker.
+        </p>
+        <p>
+          Press <strong>Start Transmitting</strong>, set your clock to its manual sync/receive mode, and wait. Because these protocols transmit one frame per minute, it usually takes several minutes for a clock to successfully decode the time.
+        </p>
+
+        <h2>Important Notes</h2>
+        <p>
+          <strong>Disclaimer:</strong> This simulator is provided "as is" for educational and experimental purposes. The author assumes no responsibility for any damages, missed alarms, or late appointments resulting from the use of this tool.
+        </p>
+        <p>
+          This project is only tested limitedly. Feedback and contributions are very welcome to improve the simulator's accuracy and usability.
+        </p>
+        <p>
+          This project is heavily inspired by the open-source <a href="https://github.com/shogo82148/web-jjy" target="_blank" rel="noopener">web-jjy</a> project.
+        </p>
+        <p>
+          &copy; 2026 Chuanjin Su.
+          Released under the MIT License.
+        </p>
+      </div>
+    </div>
+
+    <script src="src/wwvb.js"></script>
+    <script src="src/bpc.js"></script>
+    <script src="src/jjy.js"></script>
+    <script src="src/msf.js"></script>
+    <script src="src/dcf77.js"></script>
+    <script src="src/simulator.js"></script>
+  </body>
+</html>
