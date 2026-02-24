@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Point crawlers directly to your sitemap
+Sitemap: https://chuanjin-su.github.io/web-multiband/sitemap.xml
