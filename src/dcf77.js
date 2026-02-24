@@ -1,10 +1,17 @@
 window.TimeProtocols = window.TimeProtocols || {};
 
 window.TimeProtocols.dcf77 = (function() {
-    // 19.375 kHz Sawtooth wave. The 4th harmonic hits exactly 77.5 kHz.
-    // var freq = 19375; 
     // 15.500 kHz square wave. The 5th harmonic hits exactly 77.5 kHz.
     var freq = 15500;
+
+    // ADD THESE: Persistent audio nodes to prevent inter-minute gaps
+    var currentCtx = null;
+    var osc = null;
+    var gainNode = null;
+    
+    // ADD THESE: Hardware clock anchors to prevent System RTC drift
+    var baseOffset = 0;
+    var baseStart = 0;
 
     // Automatic calculator for Central European Summer Time (CEST)
     // Starts: Last Sunday in March at 01:00 UTC (02:00 CET)
@@ -26,16 +33,49 @@ window.TimeProtocols.dcf77 = (function() {
 
         schedule: function(date_loc, ctx) {
             var isDST = isCEST(date_loc);
-            
-            // CET is UTC+1, CEST is UTC+2
             var offsetMs = isDST ? (2 * 60 * 60 * 1000) : (1 * 60 * 60 * 1000);
-            
-            // DCF77 must encode the time of the NEXT minute (+ 60,000 ms)
             var dateGer = new Date(date_loc.getTime() + offsetMs + 60000);
 
             var now = Date.now();
             var start = date_loc.getTime();
-            var offset = (start - now) / 1000 + ctx.currentTime;
+            var offset;
+
+            // Maintain a single, continuous phase-locked carrier wave
+            if (ctx !== currentCtx) {
+                if (osc) {
+                    try { osc.stop(); } catch(e) {}
+                }
+                
+                // Initialize the hardware clock anchor
+                offset = (start - now) / 1000 + ctx.currentTime;
+                baseOffset = offset;
+                baseStart = start;
+                
+                osc = ctx.createOscillator();
+                osc.type = "square";
+                osc.frequency.value = freq;
+                
+                gainNode = ctx.createGain();
+                gainNode.gain.setValueAtTime(1, ctx.currentTime);
+                
+                osc.connect(gainNode);
+                gainNode.connect(ctx.destination);
+                
+                var startTime = Math.max(offset, ctx.currentTime);
+                osc.start(startTime);
+                
+                currentCtx = ctx;
+            } else {
+                // Eliminate RTC vs Audio Hardware Clock drift
+                offset = baseOffset + (start - baseStart) / 1000;
+                
+                // Guard against the audio hardware clock running faster than the RTC
+                if (offset < ctx.currentTime + 0.5) {
+                    baseOffset = ctx.currentTime + 0.5;
+                    baseStart = start;
+                    offset = baseOffset;
+                }
+            }
 
             var minute = dateGer.getUTCMinutes();
             var hour = dateGer.getUTCHours();
@@ -69,21 +109,30 @@ window.TimeProtocols.dcf77 = (function() {
 
             // DCF77 Carrier Modulation (Drops at the START of the second)
             // DCF77 Carrier Modulation (Drops at the START of the second)
+            // DCF77 Carrier Modulation (Drops at the START of the second)
             function emit(s, drop_duration) {
                 array.push(drop_duration);
                 var t = s + offset;
-                if (t < 0) return;
                 
                 if (drop_duration > 0) {
-                    gainNode.gain.setValueAtTime(0, t);
-                    gainNode.gain.setValueAtTime(1, t + drop_duration);
+                    if (t >= ctx.currentTime) {
+                        // CRITICAL FIX: DCF77 reduces amplitude to 15%, it does NOT drop to 0.
+                        gainNode.gain.setValueAtTime(0.15, t);
+                    }
+                    if (t + drop_duration >= ctx.currentTime) {
+                        gainNode.gain.setValueAtTime(1, Math.max(t + drop_duration, ctx.currentTime));
+                    }
                 } else {
-                    // Explicitly ensure the carrier is ON if there is no drop
-                    gainNode.gain.setValueAtTime(1, t);
+                    // Second 59: Ensure carrier stays perfectly ON
+                    if (t >= ctx.currentTime) {
+                        gainNode.gain.setValueAtTime(1, t);
+                    }
                 }
                 
                 // Ensure carrier stays on until the end of the second
-                gainNode.gain.setValueAtTime(1, t + 0.999);
+                if (t + 0.999 >= ctx.currentTime) {
+                    gainNode.gain.setValueAtTime(1, Math.max(t + 0.999, ctx.currentTime));
+                }
             }
 
             // --- DCF77 BIT GENERATION ---

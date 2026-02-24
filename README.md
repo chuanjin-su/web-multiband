@@ -9,7 +9,7 @@ This simulator supports the major global time signal stations:
 * **BPC (China):** 68.5 kHz (17.125 kHz sawtooth, 4th harmonic)
 * **WWVB (USA):** 60 kHz (20 kHz square wave, 3rd harmonic)
 * **DCF77 (Germany/Europe):** 77.5 kHz
-* **MSF (UK):** 60 kHz (20 kHz sawtooth wave, 3rd harmonic)
+* **MSF (UK):** 60 kHz (20 kHz square wave, 3rd harmonic)
 * **JJY (Japan):** 40 kHz (13.333 kHz square wave, 3rd harmonic)
 
 ![](coverage.png)
@@ -38,11 +38,11 @@ This project is tested limitedly on a MacBook Pro (2021) with a Casio G-Shock GW
 
 | Signal | GWM5610 | PRW-61FC |
 | ------ | ------- | -------- |
-| WWVB | N/A | N/A |
-| BPC | N/A | N/A |
-| DCF77 | N/A | N/A |
-| MSF | N/A | N/A |
-| JJY | N/A | N/A |
+| WWVB | ✅ | ✅ |
+| BPC | ✅ | ✅ |
+| DCF77 | ✅ | ✅ |
+| MSF | ✅ | ✅ |
+| JJY | ✅ | ✅ |
 
 In addition, since the author only relies on WWVB, the other protocols may not be fully tested. Feedback and contributions are very welcome to improve the simulator's accuracy and usability!
 

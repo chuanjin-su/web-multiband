@@ -1,8 +1,13 @@
 window.TimeProtocols = window.TimeProtocols || {};
 
 window.TimeProtocols.msf = (function() {
-    // 20 kHz Sawtooth wave. The 3rd harmonic hits exactly 60 kHz.
+    // 20 kHz square wave. The 3rd harmonic hits exactly 60 kHz.
     var freq = 20000;
+
+    // Persistent audio nodes to prevent inter-minute gaps and clicks
+    var currentCtx = null;
+    var osc = null;
+    var gainNode = null;
 
     // Automatic calculator for British Summer Time (BST)
     function isUKDST(date) {
@@ -43,33 +48,44 @@ window.TimeProtocols.msf = (function() {
             var array = [];
             var bit_count = 0;
 
-            var osc = ctx.createOscillator();
-            osc.type = "sawtooth";
-            osc.frequency.value = freq;
+            // Maintain a single, continuous phase-locked carrier wave
+            if (ctx !== currentCtx) {
+                if (osc) {
+                    try { osc.stop(); } catch(e) {}
+                }
+                osc = ctx.createOscillator();
+                osc.type = "square";
+                osc.frequency.value = freq;
 
-            var gainNode = ctx.createGain();
-            gainNode.gain.setValueAtTime(0, ctx.currentTime);
+                gainNode = ctx.createGain();
+                
+                // CRITICAL FIX: Initialize to 1 (Carrier ON) so mid-second starts don't drop volume
+                gainNode.gain.setValueAtTime(1, ctx.currentTime);
 
-            osc.connect(gainNode);
-            gainNode.connect(ctx.destination);
+                osc.connect(gainNode);
+                gainNode.connect(ctx.destination);
 
-            var startTime = Math.max(offset, ctx.currentTime);
-            var stopTime = offset + 60.0;
-
-            if (stopTime > ctx.currentTime) {
+                var startTime = Math.max(offset, ctx.currentTime);
                 osc.start(startTime);
-                osc.stop(stopTime);
+
+                currentCtx = ctx;
             }
 
+            // Robust Amplitude Modulation scheduling that handles mid-second starts safely
             function emit(s, drop_duration) {
                 array.push(drop_duration);
                 var t = s + offset;
-                if (t < 0) return;
-
-                gainNode.gain.setValueAtTime(0, t);
-                gainNode.gain.setValueAtTime(1, t + drop_duration);
-                gainNode.gain.setValueAtTime(1, t + 0.999);
-                gainNode.gain.setValueAtTime(0, t + 1.0);
+                
+                if (t >= ctx.currentTime) {
+                    gainNode.gain.setValueAtTime(0, t);
+                }
+                if (t + drop_duration >= ctx.currentTime) {
+                    gainNode.gain.setValueAtTime(1, Math.max(t + drop_duration, ctx.currentTime));
+                }
+                // Ensure carrier stays on until the end of the second
+                if (t + 0.999 >= ctx.currentTime) {
+                    gainNode.gain.setValueAtTime(1, Math.max(t + 0.999, ctx.currentTime));
+                }
             }
 
             function bit(s, value, weight) {

@@ -1,7 +1,16 @@
 window.TimeProtocols = window.TimeProtocols || {};
 
 window.TimeProtocols.bpc = (function() {
-    var freq = 17125;
+    var freq = 17125; 
+    
+    // Persistent audio nodes to prevent inter-minute 60-second gaps
+    var currentCtx = null;
+    var osc = null;
+    var gainNode = null;
+    
+    // Hardware clock anchors to prevent System RTC drift
+    var baseOffset = 0;
+    var baseStart = 0;
 
     return {
         name: "BPC (China)",
@@ -10,11 +19,40 @@ window.TimeProtocols.bpc = (function() {
 
         schedule: function(date_loc, ctx, useLocalTime) {
             var now = Date.now();
-
-            // CRITICAL: The audio scheduling offset MUST be calculated using
-            // the un-shifted local date object, otherwise the audio will jump.
             var start = date_loc.getTime();
-            var offset = (start - now) / 1000 + ctx.currentTime;
+            var offset;
+
+            // Maintain a single, continuous phase-locked carrier wave across minute boundaries
+            if (ctx !== currentCtx) {
+                if (osc) {
+                    try { osc.stop(); } catch(e) {}
+                }
+                
+                // Initialize the hardware clock anchor
+                offset = (start - now) / 1000 + ctx.currentTime;
+                baseOffset = offset;
+                baseStart = start;
+                
+                osc = ctx.createOscillator();
+                osc.type = "sawtooth";
+                osc.frequency.value = freq;
+
+                gainNode = ctx.createGain();
+                gainNode.gain.setValueAtTime(1, ctx.currentTime);
+
+                osc.connect(gainNode);
+                gainNode.connect(ctx.destination);
+                
+                var startTime = Math.max(offset, ctx.currentTime);
+                osc.start(startTime);
+                
+                currentCtx = ctx;
+            } else {
+                // CRITICAL FIX: Eliminate RTC vs Audio Hardware Clock drift.
+                // Advance the offset by exactly the elapsed theoretical time (60.000s).
+                // This prevents the audio edges from "walking" out of the G-Shock's DSP window.
+                offset = baseOffset + (start - baseStart) / 1000;
+            }
 
             // Determine which timezone to be used for encoding the time information
             var date;
@@ -28,42 +66,40 @@ window.TimeProtocols.bpc = (function() {
             var minute = date.getMinutes();
             var hour = date.getHours();
             var year = date.getFullYear() % 100;
-            var week_day = date.getDay();
+            var week_day = date.getDay() || 7; 
             var day = date.getDate();
             var month = date.getMonth() + 1;
 
             var array = [];
 
             var pm = (hour >= 12) ? 1 : 0;
-            hour = hour % 12;
+            hour = hour % 12; 
 
-            var osc = ctx.createOscillator();
-            osc.type = "sawtooth";
-            osc.frequency.value = freq;
-
-            var gainNode = ctx.createGain();
-            gainNode.gain.setValueAtTime(0, ctx.currentTime);
-
-            osc.connect(gainNode);
-            gainNode.connect(ctx.destination);
-
-            var startTime = Math.max(offset, ctx.currentTime);
-            var stopTime = offset + 60.0;
-
-            if (stopTime > ctx.currentTime) {
-                osc.start(startTime);
-                osc.stop(stopTime);
-            }
-
+            // Clean Amplitude Modulation
             function emit(s, drop_duration) {
                 array.push(drop_duration);
                 var t = s + offset;
-                if (t < 0) return;
 
-                gainNode.gain.setValueAtTime(0, t);
-                gainNode.gain.setValueAtTime(1, t + drop_duration);
-                gainNode.gain.setValueAtTime(1, t + 0.999);
-                gainNode.gain.setValueAtTime(0, t + 1.0);
+                if (drop_duration > 0) {
+                    if (t >= ctx.currentTime) {
+                        // CRITICAL FIX: BPC uses a 10dB reduction, NOT full silence.
+                        // Dropping to exactly 0 destroys the watch's Phase-Locked Loop (PLL).
+                        gainNode.gain.setValueAtTime(0.32, t);
+                    }
+                    if (t + drop_duration >= ctx.currentTime) {
+                        gainNode.gain.setValueAtTime(1, Math.max(t + drop_duration, ctx.currentTime));
+                    }
+                } else {
+                    // P0 marker: maintain perfect continuous carrier
+                    if (t >= ctx.currentTime) {
+                        gainNode.gain.setValueAtTime(1, t);
+                    }
+                }
+                
+                // Ensure carrier stays on until the end of the second
+                if (t + 0.999 >= ctx.currentTime) {
+                    gainNode.gain.setValueAtTime(1, Math.max(t + 0.999, ctx.currentTime));
+                }
             }
 
             function bit(s, value) {
@@ -77,18 +113,19 @@ window.TimeProtocols.bpc = (function() {
                 return value;
             }
 
+            // BPC repeats the time code 3 times per minute (20-second frames)
             for (var i = 0; i < 3; i++) {
                 // Second 0: P0 (No signal reduction, carrier ON for full second)
                 emit(i * 20, 0.0);
 
                 // Second 1: P1 (Frame indicator: 0, 1, or 2)
                 var crc = 0;
-                var b = i;
+                var b = i; 
                 bit(1 + i * 20, b);
                 crc = crc ^ (b & 1) ^ ((b >> 1) & 1);
 
                 // Second 2: P2 = 0
-                b = 0;
+                b = 0; 
                 bit(2 + i * 20, b);
                 crc = crc ^ (b & 1) ^ ((b >> 1) & 1);
 
@@ -119,7 +156,7 @@ window.TimeProtocols.bpc = (function() {
                 bit(9 + i * 20, b);
                 crc = crc ^ (b & 1) ^ ((b >> 1) & 1);
 
-                // Second 10: PM & CRC
+                // Second 10: PM & P1 Parity
                 b = pm << 1;
                 b = b + crc;
                 bit(10 + i * 20, b);
@@ -155,9 +192,8 @@ window.TimeProtocols.bpc = (function() {
                 bit(18 + i * 20, b);
                 crc = crc ^ (b & 1) ^ ((b >> 1) & 1);
 
-                // Second 19: Year & CRC
-                b = year >> 6;
-                b = b + crc;
+                // Second 19: 64-weight Year bit & P2 Parity
+                b = ((year >> 6) << 1) | crc;
                 bit(19 + i * 20, b);
             }
 
