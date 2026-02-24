@@ -8,7 +8,7 @@ This simulator supports the major global time signal stations:
 
 * **BPC (China):** 68.5 kHz (17.125 kHz sawtooth, 4th harmonic)
 * **WWVB (USA):** 60 kHz (20 kHz square wave, 3rd harmonic)
-* **DCF77 (Germany/Europe):** 77.5 kHz
+* **DCF77 (Germany/Europe):** 77.5 kHz (15.5 kHz square, 5th harmonic)
 * **MSF (UK):** 60 kHz (20 kHz square wave, 3rd harmonic)
 * **JJY (Japan):** 40 kHz (13.333 kHz square wave, 3rd harmonic)
 
