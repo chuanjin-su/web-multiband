@@ -1,5 +1,7 @@
 # Web Multiband Simulator
 
+[Link: chuanjin-su.github.io/web-multiband/](https://chuanjin-su.github.io/web-multiband/)
+
 A browser-based tool to synchronize radio-controlled watches (such as Casio Multiband watches and Citizen Atomic Timekeeping watches) by simulating longwave atomic clock radio signals directly through your computer or smartphone speakers.
 
 ## Supported Protocols
