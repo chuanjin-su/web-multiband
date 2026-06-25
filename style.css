@@ -195,13 +195,6 @@ a:hover {
     color: #0f172a;
 }
 
-.control-row {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 15px;
-}
-
 /* Pill Tabs (Protocol Selector) */
 .protocol-pills {
     display: flex;
@@ -247,11 +240,12 @@ a:hover {
     transform: scale(0.96);
 }
 
-/* Action Button */
 #control-button {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
+    width: 100%;
     font-family: inherit;
     font-size: 1rem;
     font-weight: 600;
@@ -259,7 +253,7 @@ a:hover {
     color: #fff;
     border: none;
     border-radius: 28px;
-    padding: 12px 28px;
+    padding: 14px 28px;
     cursor: pointer;
     transition: transform 0.15s ease, background-color 0.2s ease, box-shadow 0.2s ease;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
@@ -311,6 +305,10 @@ a:hover {
 
 #option input[type="checkbox"]:checked::after {
     transform: translateX(18px);
+}
+
+[data-theme="dark"] #option input[type="checkbox"] {
+    background: #475569;
 }
 
 label {
@@ -392,7 +390,7 @@ button:active {
     border-radius: 12px;
     padding: 0 24px;
     box-shadow: var(--shadow);
-    margin-bottom: 30px;
+    margin-bottom: 0;
     max-height: 0;
     overflow: hidden;
     opacity: 0;
@@ -403,6 +401,7 @@ button:active {
     max-height: 400px;
     opacity: 1;
     padding: 24px;
+    margin-bottom: 30px;
 }
 
 .canvas-header {
@@ -550,6 +549,10 @@ canvas {
     background: var(--bg-color);
 }
 
+[data-theme="dark"] .accordion-header {
+    color: var(--text-main);
+}
+
 .accordion-icon {
     display: flex;
     align-items: center;
@@ -615,12 +618,6 @@ canvas {
         font-size: 2rem;
     }
 
-    .control-row {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 12px;
-    }
-
     .protocol-pills {
         justify-content: center;
     }
@@ -631,10 +628,8 @@ canvas {
     }
 
     #control-button {
-        justify-content: center;
         font-size: 0.95rem;
         padding: 14px 24px;
-        width: 100%;
     }
 
     .canvas-container {

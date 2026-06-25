@@ -23,7 +23,7 @@ window.TimeProtocols.msf = (function() {
     }
 
     return {
-        name: "MSF (United Kingdom)",
+        name: "MSF (UK)",
 
         schedule: function(date_loc, ctx) {
             var isDST = isUKDST(date_loc);
