@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <script data-goatcounter="https://scj16.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
     <title>Web Multiband Simulator - Sync Radio-Controlled Watches</title>
@@ -23,30 +23,51 @@
 
     <link rel="canonical" href="https://chuanjin-su.github.io/web-multiband/">
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="style.css">
   </head>
 
   <body>
     <div class="container">
-      <h1>Web Multiband Simulator</h1>
+      <div class="header-row">
+        <h1>Web Multiband Simulator</h1>
+        <button id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+          <svg id="theme-icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg id="theme-icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
       <p class="subtitle">
         Reproduce radio time signals to sync radio-controlled watches.<br>
         Please star the project on <a href="https://github.com/chuanjin-su/web-multiband" target="_blank" rel="noopener">GitHub</a> if you find it helpful!
       </p>
 
-      <div class="controls">
-        <div class="control-row">
-          <label for="protocol-selector">Target Signal:</label>
-          <select id="protocol-selector"></select>
-          <button id="control-button">Start Transmitting</button>
-        </div>
-        <div class="control-row">
-          <div id="time">Ready to sync</div>
-        </div>
-        <div id="option"></div>
+      <div class="time-card">
+        <div class="time-primary" id="time-primary">--:--:--</div>
+        <div class="time-secondary" id="time-secondary">Select a protocol</div>
+        <div class="time-badges" id="time-badges"></div>
       </div>
 
-      <div id="canvas-panel" class="canvas-container" style="display: none;">
+      <div class="controls">
+        <div class="control-row">
+          <div id="protocol-selector" class="protocol-pills"></div>
+          <button id="control-button" aria-label="Start transmitting">
+            <svg id="btn-icon-play" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+            <svg id="btn-icon-stop" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+            <span>Start Transmitting</span>
+          </button>
+        </div>
+        <div id="option"></div>
+        <div id="status-live" class="sr-only" aria-live="polite"></div>
+      </div>
+
+      <div id="canvas-panel" class="canvas-container">
+        <div class="canvas-header">
+          <span class="broadcast-indicator"></span>
+          <span class="broadcast-label">Broadcasting</span>
+        </div>
         <canvas id="canvas" width="1000" height="200"></canvas>
       </div>
 
@@ -60,48 +81,143 @@
         <img src="coverage.png" alt="Map of global atomic clock signal coverage" onerror="this.style.display='none'">
 
         <div class="signal-grid">
-          <div class="signal-card"><strong>BPC</strong>🇨🇳 China<br>68.5 kHz</div>
-          <div class="signal-card"><strong>WWVB</strong>🇺🇸 USA<br>60 kHz</div>
-          <div class="signal-card"><strong>DCF77</strong>🇩🇪 Germany<br>77.5 kHz</div>
-          <div class="signal-card"><strong>MSF</strong>🇬🇧 UK<br>60 kHz</div>
-          <div class="signal-card"><strong>JJY</strong>🇯🇵 Japan<br>40 & 60 kHz</div>
+          <div class="signal-card" data-protocol="bpc"><strong>BPC</strong>China<br>68.5 kHz</div>
+          <div class="signal-card" data-protocol="wwvb"><strong>WWVB</strong>USA<br>60 kHz</div>
+          <div class="signal-card" data-protocol="dcf77"><strong>DCF77</strong>Germany<br>77.5 kHz</div>
+          <div class="signal-card" data-protocol="msf"><strong>MSF</strong>UK<br>60 kHz</div>
+          <div class="signal-card" data-protocol="jjy"><strong>JJY</strong>Japan<br>40 & 60 kHz</div>
         </div>
       </div>
 
       <div class="instructions">
-        <h2>How to Use</h2>
-        <p>
-          Sync your computer's time with an accurate time source (e.g., <a href="https://time.is/" target="_blank" rel="noopener">time.is</a>, or a NTP server such as <a href="https://www.ntppool.org/" target="_blank" rel="noopener">pool.ntp.org</a>) to ensure the simulator transmits the correct time signals.
-        </p>
-        <p>
-          Use a headphone or the computer's built-in speaker. Maximize the volume for better reception, and place your radio-controlled clock close to the speaker.
-        </p>
-        <p>
-          Press <strong>Start Transmitting</strong>, set your clock to its manual sync/receive mode, and wait. Because these protocols transmit one frame per minute, it usually takes several minutes for a clock to successfully decode the time.
-        </p>
+        <div class="accordion">
+          <button class="accordion-header" aria-expanded="true">
+            <span class="accordion-icon">1</span>
+            <span>How to Use</span>
+            <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-body">
+            <p>
+              Sync your computer's time with an accurate time source (e.g., <a href="https://time.is/" target="_blank" rel="noopener">time.is</a>, or a NTP server such as <a href="https://www.ntppool.org/" target="_blank" rel="noopener">pool.ntp.org</a>) to ensure the simulator transmits the correct time signals.
+            </p>
+            <p>
+              Use a headphone or the computer's built-in speaker. Maximize the volume for better reception, and place your radio-controlled clock close to the speaker.
+            </p>
+            <p>
+              Press <strong>Start Transmitting</strong>, set your clock to its manual sync/receive mode, and wait. Because these protocols transmit one frame per minute, it usually takes several minutes for a clock to successfully decode the time.
+            </p>
+          </div>
+        </div>
 
-        <h2>Important Notes</h2>
-        <p>
-          <strong>Disclaimer:</strong> This simulator is provided "as is" for educational and experimental purposes. The author assumes no responsibility for any damages, missed alarms, or late appointments resulting from the use of this tool.
-        </p>
-        <p>
-          This project is only tested limitedly. Feedback and contributions are very welcome to improve the simulator's accuracy and usability.
-        </p>
-        <p>
-          This project is heavily inspired by the open-source <a href="https://github.com/shogo82148/web-jjy" target="_blank" rel="noopener">web-jjy</a> project.
-        </p>
-        <p>
-          &copy; 2026 Chuanjin Su.
-          Released under the MIT License.
-        </p>
+        <div class="accordion">
+          <button class="accordion-header" aria-expanded="false">
+            <span class="accordion-icon">!</span>
+            <span>Important Notes</span>
+            <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-body" style="display:none">
+            <p>
+              <strong>Disclaimer:</strong> This simulator is provided "as is" for educational and experimental purposes. The author assumes no responsibility for any damages, missed alarms, or late appointments resulting from the use of this tool.
+            </p>
+            <p>
+              This project is only tested limitedly. Feedback and contributions are very welcome to improve the simulator's accuracy and usability.
+            </p>
+            <p>
+              This project is heavily inspired by the open-source <a href="https://github.com/shogo82148/web-jjy" target="_blank" rel="noopener">web-jjy</a> project.
+            </p>
+            <p>
+              &copy; 2026 Chuanjin Su.
+              Released under the MIT License.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
 
+    <script>
+      (function() {
+        var html = document.documentElement;
+        var toggle = document.getElementById('theme-toggle');
+        var iconSun = document.getElementById('theme-icon-sun');
+        var iconMoon = document.getElementById('theme-icon-moon');
+        var saved = localStorage.getItem('theme');
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var theme = saved || (prefersDark ? 'dark' : 'light');
+        html.setAttribute('data-theme', theme);
+        updateIcon(theme);
+
+        toggle.addEventListener('click', function() {
+          var current = html.getAttribute('data-theme');
+          var next = current === 'dark' ? 'light' : 'dark';
+          html.setAttribute('data-theme', next);
+          localStorage.setItem('theme', next);
+          updateIcon(next);
+        });
+
+        function updateIcon(t) {
+          iconSun.style.display = t === 'dark' ? 'none' : '';
+          iconMoon.style.display = t === 'dark' ? '' : 'none';
+        }
+
+        // Accordion toggle
+        var headers = document.querySelectorAll('.accordion-header');
+        headers.forEach(function(header) {
+          header.addEventListener('click', function() {
+            var expanded = this.getAttribute('aria-expanded') === 'true';
+            this.setAttribute('aria-expanded', !expanded);
+            var body = this.nextElementSibling;
+            if (!expanded) {
+              body.style.display = '';
+              body.style.maxHeight = body.scrollHeight + 'px';
+            } else {
+              body.style.maxHeight = '0';
+              setTimeout(function() { body.style.display = 'none'; }, 300);
+            }
+          });
+        });
+
+        // Clickable signal cards → select protocol pill
+        var cards = document.querySelectorAll('.signal-card');
+        cards.forEach(function(card) {
+          card.addEventListener('click', function() {
+            var proto = this.getAttribute('data-protocol');
+            var pill = document.querySelector('.protocol-pill[data-protocol="' + proto + '"]');
+            if (pill) pill.click();
+          });
+        });
+
+        // Sync active signal card when protocol pill changes
+        var observer = new MutationObserver(function() {
+          var activePill = document.querySelector('.protocol-pill.active');
+          var proto = activePill ? activePill.getAttribute('data-protocol') : null;
+          cards.forEach(function(c) {
+            if (c.getAttribute('data-protocol') === proto) {
+              c.classList.add('active');
+            } else {
+              c.classList.remove('active');
+            }
+          });
+        });
+        var pillsContainer = document.querySelector('.protocol-pills');
+        if (pillsContainer) {
+          observer.observe(pillsContainer, { attributes: true, subtree: true, attributeFilter: ['class'] });
+          // Initial sync
+          var activePill = pillsContainer.querySelector('.protocol-pill.active');
+          if (activePill) {
+            var proto = activePill.getAttribute('data-protocol');
+            cards.forEach(function(c) {
+              if (c.getAttribute('data-protocol') === proto) c.classList.add('active');
+            });
+          }
+        }
+      })();
+    </script>
     <script src="src/wwvb.js"></script>
     <script src="src/bpc.js"></script>
     <script src="src/jjy.js"></script>
     <script src="src/msf.js"></script>
     <script src="src/dcf77.js"></script>
+    <script src="src/renderer.js"></script>
     <script src="src/simulator.js"></script>
   </body>
 </html>

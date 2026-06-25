@@ -3,22 +3,69 @@
     var signal;
     var intervalId;
 
+    // iOS Safari requires a user gesture to unlock AudioContext
+    var audioUnlocked = false;
+    function unlockAudio() {
+        if (audioUnlocked) return;
+        var tmp = new AudioContext();
+        var osc = tmp.createOscillator();
+        osc.connect(tmp.destination);
+        osc.start(0);
+        osc.stop(0.001);
+        tmp.close();
+        audioUnlocked = true;
+    }
+    document.addEventListener('touchstart', unlockAudio, { once: true });
+    document.addEventListener('click', unlockAudio, { once: true });
+
     var AudioContext = window.AudioContext || window.webkitAudioContext;
     var protocolSelector = document.getElementById("protocol-selector");
     var optionContainer = document.getElementById("option");
     var protocols = window.TimeProtocols || {};
 
-    // 1. Dynamically populate the select dropdown based on loaded scripts
+    // 1. Dynamically populate pill buttons based on loaded scripts
     protocolSelector.innerHTML = "";
+    var firstKey = null;
     for (var key in protocols) {
-        var opt = document.createElement("option");
-        opt.value = key;
-        opt.textContent = protocols[key].name;
-        protocolSelector.appendChild(opt);
+        if (!firstKey) firstKey = key;
+        var pill = document.createElement("button");
+        pill.className = "protocol-pill";
+        pill.setAttribute("data-protocol", key);
+        pill.textContent = protocols[key].name;
+        protocolSelector.appendChild(pill);
+    }
+    // Activate first pill by default
+    if (firstKey) {
+        var firstPill = protocolSelector.querySelector('[data-protocol="' + firstKey + '"]');
+        if (firstPill) firstPill.classList.add('active');
     }
 
+    // Handle pill activation and protocol switching via event delegation
+    protocolSelector.addEventListener('click', function(e) {
+        var pill = e.target.closest('.protocol-pill');
+        if (!pill) return;
+
+        // Update active pill visual state
+        var pills = protocolSelector.querySelectorAll('.protocol-pill');
+        pills.forEach(function(p) { p.classList.remove('active'); });
+        pill.classList.add('active');
+
+        // Rebuild option UI for the new protocol
+        updateOptionUI();
+
+        // Restart transmission if currently playing
+        if (play_flag) {
+            stop();
+            start();
+        } else {
+            signal = undefined;
+        }
+    });
+
     function getCurrentProtocol() {
-        return protocols[protocolSelector.value];
+        var activePill = protocolSelector.querySelector('.protocol-pill.active');
+        if (!activePill) return null;
+        return protocols[activePill.getAttribute('data-protocol')];
     }
 
     // --- UPGRADED: Dynamic Option UI ---
@@ -116,94 +163,46 @@
 
     // 3. UI Controls
     var control_button = document.getElementById("control-button");
-    var canvas_panel = document.getElementById("canvas-panel"); // Grab the new container ID
+    var canvas_panel = document.getElementById("canvas-panel");
+    var statusLive = document.getElementById("status-live");
     var play_flag = false;
+    var btnLabel = control_button.querySelector('span');
+    var btnIconPlay = document.getElementById('btn-icon-play');
+    var btnIconStop = document.getElementById('btn-icon-stop');
 
     control_button.addEventListener('click', function() {
         if (play_flag) {
-            control_button.innerText = "Start Transmitting"; // Changed to match your original HTML text
+            btnLabel.textContent = "Start Transmitting";
+            btnIconPlay.style.display = '';
+            btnIconStop.style.display = 'none';
             play_flag = false;
-            canvas_panel.style.display = "none"; // Hide the canvas
+            canvas_panel.classList.remove('visible');
+            if (statusLive) statusLive.textContent = "Transmission stopped";
             stop();
         } else {
-            control_button.innerText = "Stop Transmitting";
+            btnLabel.textContent = "Stop Transmitting";
+            btnIconPlay.style.display = 'none';
+            btnIconStop.style.display = '';
             play_flag = true;
-            canvas_panel.style.display = "block"; // Show the canvas
+            canvas_panel.classList.add('visible');
+            if (statusLive) statusLive.textContent = "Transmission started";
             start();
-        }
-    });
-
-    protocolSelector.addEventListener('change', function() {
-        updateOptionUI(); // Rebuild the checkbox if the new protocol needs it
-        if (play_flag) {
-            stop();
-            start();
-        } else {
-            signal = undefined;
         }
     });
 
     // 4. Rendering Engine
-    var nowtime = document.getElementById('time');
-    var canvas = document.getElementById('canvas');
-    var ctx2d = canvas.getContext('2d');
-    var w = canvas.width;
-    var h = canvas.height;
+    var renderer = new window.SignalRenderer('canvas', function() { return signal; }, getCurrentProtocol, getOptionState);
+    renderer.start();
 
-    render();
-    function render() {
-        var protocol = getCurrentProtocol();
-
-        if (protocol) {
-            // Pass the checkbox state as the 2nd argument to formatDate
-            nowtime.innerText = protocol.formatDate(new Date(), getOptionState());
-        }
-
-        ctx2d.clearRect(0, 0, w, h);
-        if (!signal || !protocol) {
-            requestAnimationFrame(render);
-            return;
-        }
-
-        var now = Math.floor(Date.now() / 1000) % 60;
-
-        ctx2d.strokeStyle = "#555";
-        ctx2d.fillStyle = "#555";
-        ctx2d.font = "12px sans-serif";
-        ctx2d.beginPath();
-
-        ctx2d.moveTo(0, 80); ctx2d.lineTo(900, 80);
-        ctx2d.moveTo(0, 180); ctx2d.lineTo(900, 180);
-
-        for (var tick = 0; tick <= 60; tick++) {
-            var row = Math.floor(tick / 30);
-            if (tick === 60) row = 1;
-
-            var x = (tick % 30) * 30;
-            if (tick === 60) x = 900;
-
-            var yBase = row === 0 ? 80 : 180;
-
-            ctx2d.moveTo(x, yBase);
-            if (tick % 10 === 0) {
-                ctx2d.lineTo(x, yBase + 12);
-                if (tick <= 60) ctx2d.fillText(tick, x + 3, yBase + 18);
-            } else if (tick % 5 === 0) {
-                ctx2d.lineTo(x, yBase + 8);
-            } else {
-                ctx2d.lineTo(x, yBase + 5);
-            }
-        }
-        ctx2d.stroke();
-
-        for (var i = 0; i < signal.length; i++) {
-            var val = signal[i];
-            var barX = (i % 30) * 30;
-            var barY = Math.floor(i / 30) * 100;
-
-            protocol.drawBar(ctx2d, val, i, now, barX, barY, 30, 80);
-        }
-
-        requestAnimationFrame(render);
-    }
+    // Wrap start/stop to manage renderer lifecycle
+    var _start = start;
+    var _stop = stop;
+    start = function() {
+        _start();
+        renderer.start();
+    };
+    stop = function() {
+        renderer.stop();
+        _stop();
+    };
 })();
