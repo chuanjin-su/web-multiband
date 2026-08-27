@@ -13,19 +13,23 @@ window.TimeProtocols.dcf77 = (function() {
     var baseOffset = 0;
     var baseStart = 0;
 
-    // Automatic calculator for Central European Summer Time (CEST)
-    // Starts: Last Sunday in March at 01:00 UTC (02:00 CET)
-    // Ends: Last Sunday in October at 01:00 UTC (03:00 CEST)
-    function isCEST(date) {
-        var year = date.getUTCFullYear();
-
+    // Returns the CEST start/end instants (epoch ms) for a given year.
+    // Starts: last Sunday in March at 01:00 UTC (02:00 CET -> 03:00 CEST)
+    // Ends:   last Sunday in October at 01:00 UTC (03:00 CEST -> 02:00 CET)
+    function cestBounds(year) {
         var startDST = new Date(Date.UTC(year, 2, 31, 1));
-        startDST.setUTCDate(31 - startDST.getUTCDay()); 
+        startDST.setUTCDate(31 - startDST.getUTCDay());
 
         var endDST = new Date(Date.UTC(year, 9, 31, 1));
-        endDST.setUTCDate(31 - endDST.getUTCDay()); 
+        endDST.setUTCDate(31 - endDST.getUTCDay());
 
-        return date.getTime() >= startDST.getTime() && date.getTime() < endDST.getTime();
+        return { start: startDST.getTime(), end: endDST.getTime() };
+    }
+
+    function isCEST(date) {
+        var b = cestBounds(date.getUTCFullYear());
+        var t = date.getTime();
+        return t >= b.start && t < b.end;
     }
 
     return {
@@ -89,26 +93,15 @@ window.TimeProtocols.dcf77 = (function() {
             
             var array = [];
 
-            var osc = ctx.createOscillator();
-            osc.type = "square";
-            osc.frequency.value = freq;
-            
-            var gainNode = ctx.createGain();
-            gainNode.gain.setValueAtTime(0, ctx.currentTime);
-            
-            osc.connect(gainNode);
-            gainNode.connect(ctx.destination);
-            
-            var startTime = Math.max(offset, ctx.currentTime);
-            var stopTime = offset + 60.0;
-            
-            if (stopTime > ctx.currentTime) {
-                osc.start(startTime);
-                osc.stop(stopTime);
-            }
+            // NOTE: No per-minute oscillator is created here. The persistent
+            // carrier created above (module-level osc/gainNode) is the ONLY
+            // carrier; emit() modulates its gain between 1 (full carrier) and
+            // 0.15 (official DCF77 85% amplitude reduction, PTB).
+            // A previous version created a second oscillator here with local
+            // `var osc`/`var gainNode` — which hoisted over the whole function,
+            // shadowed the module-level persistent carrier, leaked a permanent
+            // full-volume carrier per session, and halved the modulation depth.
 
-            // DCF77 Carrier Modulation (Drops at the START of the second)
-            // DCF77 Carrier Modulation (Drops at the START of the second)
             // DCF77 Carrier Modulation (Drops at the START of the second)
             function emit(s, drop_duration) {
                 array.push(drop_duration);
@@ -145,6 +138,13 @@ window.TimeProtocols.dcf77 = (function() {
             // THE FIX: Correctly map the Zone Bits
             bits[17] = isDST ? 1 : 0; // Bit 17 = 1 if CEST (Summer)
             bits[18] = isDST ? 0 : 1; // Bit 18 = 1 if CET (Winter)
+
+            // Bit 16: Summer time announcement (PTB) — set to 1 during the
+            // hour before a CEST <-> CET transition.
+            var cest = cestBounds(date_loc.getUTCFullYear());
+            var tMs = date_loc.getTime();
+            bits[16] = ((tMs >= cest.start - 3600000 && tMs < cest.start) ||
+                        (tMs >= cest.end - 3600000 && tMs < cest.end)) ? 1 : 0;
             
             // Bit 19: Leap second warning (0)
             bits[20] = 1; // Start of time information (always 1)
