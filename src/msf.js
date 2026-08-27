@@ -9,17 +9,23 @@ window.TimeProtocols.msf = (function() {
     var osc = null;
     var gainNode = null;
 
-    // Automatic calculator for British Summer Time (BST)
-    function isUKDST(date) {
-        var year = date.getUTCFullYear();
-
+    // Returns the BST start/end instants (epoch ms) for a given year.
+    // Starts: last Sunday in March at 01:00 UTC (01:00 GMT -> 02:00 BST)
+    // Ends:   last Sunday in October at 01:00 UTC (02:00 BST -> 01:00 GMT)
+    function ukDstBounds(year) {
         var startDST = new Date(Date.UTC(year, 2, 31, 1));
         startDST.setUTCDate(31 - startDST.getUTCDay());
 
         var endDST = new Date(Date.UTC(year, 9, 31, 1));
         endDST.setUTCDate(31 - endDST.getUTCDay());
 
-        return date.getTime() >= startDST.getTime() && date.getTime() < endDST.getTime();
+        return { start: startDST.getTime(), end: endDST.getTime() };
+    }
+
+    function isUKDST(date) {
+        var b = ukDstBounds(date.getUTCFullYear());
+        var t = date.getTime();
+        return t >= b.start && t < b.end;
     }
 
     return {
@@ -156,8 +162,13 @@ window.TimeProtocols.msf = (function() {
             // Second 52: Marker 0 (A=0, B=0)
             emit(52, 0.1);
 
-            // Second 53: Summer Time Warning / Impending change (A=1, B=0)
-            emit(53, 0.2);
+            // Second 53: Summer Time Warning (A=1; B=1 during the hour before
+            // a BST <-> GMT change, per NPL — extends the drop to 300 ms)
+            var dstB = ukDstBounds(date_loc.getUTCFullYear());
+            var tMs = date_loc.getTime();
+            var bstWarning = (tMs >= dstB.start - 3600000 && tMs < dstB.start) ||
+                             (tMs >= dstB.end - 3600000 && tMs < dstB.end);
+            emit(53, bstWarning ? 0.3 : 0.2);
 
             // Seconds 54-57: Parity Bits (A=1, B=Parity)
             emit(54, pYear ? 0.3 : 0.2);

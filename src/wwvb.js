@@ -3,8 +3,10 @@ window.TimeProtocols = window.TimeProtocols || {};
 window.TimeProtocols.wwvb = (function() {
     var freq = 20000; // 20 kHz
 
-    function isUSDST(date) {
-        var year = date.getUTCFullYear();
+    // Returns the DST start/end instants (epoch ms) for a given year.
+    // DST begins: 2nd Sunday of March, 2:00 AM local (EST) = 07:00 UTC
+    // DST ends:   1st Sunday of November, 2:00 AM local (EST) = 06:00 UTC
+    function dstBounds(year) {
         var startDST = new Date(Date.UTC(year, 2, 1));
         var daysToSunday = (7 - startDST.getUTCDay()) % 7;
         startDST.setUTCDate(1 + daysToSunday + 7);
@@ -15,7 +17,13 @@ window.TimeProtocols.wwvb = (function() {
         endDST.setUTCDate(1 + daysToSunday);
         endDST.setUTCHours(6);
 
-        return date.getTime() >= startDST.getTime() && date.getTime() < endDST.getTime();
+        return { start: startDST.getTime(), end: endDST.getTime() };
+    }
+
+    function isUSDST(date) {
+        var b = dstBounds(date.getUTCFullYear());
+        var t = date.getTime();
+        return t >= b.start && t < b.end;
     }
 
     return {
@@ -95,8 +103,27 @@ window.TimeProtocols.wwvb = (function() {
             zero(54);
             isLeapYear ? one(55) : zero(55);
             zero(56);
-            summer_time ? one(57) : zero(57);
-            summer_time ? one(58) : zero(58);
+
+            // Bits 57-58: DST status (NIST enhanced format, 2013).
+            //   00 = standard time, 11 = DST in effect
+            //   10 = DST begins today, 01 = DST ends today
+            // The transitional codes replace the plain state during the local
+            // (Eastern) calendar day of the transition Sunday.
+            var dstState;
+            var bounds = dstBounds(fullyear);
+            var tMs = date.getTime();
+            var HOUR = 60 * 60 * 1000;
+            // Spring Sunday local day: midnight EST (start - 2h) to midnight EDT (start + 21h)
+            // Fall Sunday local day:   midnight EDT (end - 2h)   to midnight EST (end + 23h)
+            if (tMs >= bounds.start - 2 * HOUR && tMs < bounds.start + 21 * HOUR) {
+                dstState = 2; // 10: DST begins today
+            } else if (tMs >= bounds.end - 2 * HOUR && tMs < bounds.end + 23 * HOUR) {
+                dstState = 1; // 01: DST ends today
+            } else {
+                dstState = summer_time ? 3 : 0; // 11: DST active / 00: standard
+            }
+            (dstState & 2) ? one(57) : zero(57);
+            (dstState & 1) ? one(58) : zero(58);
             marker(59);
 
             return array;

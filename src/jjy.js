@@ -20,7 +20,7 @@ window.TimeProtocols.jjy = (function() {
 
         options: [
             { text: "Use Local Time instead of JST" },
-            { text: "Enable DST" }
+            { text: "Enable DST (nonstandard — real JJY always sends 0 here)" }
         ],
 
         schedule: function(date_loc, ctx, optStates, nowMs) {
