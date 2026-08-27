@@ -195,6 +195,115 @@ a:hover {
     color: #0f172a;
 }
 
+/* Time Source Selector (inside the time card, below the badges) */
+.time-source {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    transition: var(--transition-theme);
+}
+
+.time-source-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+    margin-right: 4px;
+}
+
+.time-source-pill {
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: var(--bg-color);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: var(--transition-theme), transform 0.15s ease;
+    white-space: nowrap;
+}
+
+.time-source-pill:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    background-color: var(--bg-color);
+}
+
+.time-source-pill.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+
+[data-theme="dark"] .time-source-pill.active {
+    color: #0f172a;
+}
+
+.time-source-pill:active {
+    transform: scale(0.96);
+}
+
+/* NTP status line (NTP mode only) */
+.time-ntp-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.time-ntp-status.ntp-ok #ntp-status-text {
+    color: #16a34a;
+}
+
+.time-ntp-status.ntp-syncing #ntp-status-text {
+    color: #d97706;
+}
+
+.time-ntp-status.ntp-error #ntp-status-text {
+    color: #dc2626;
+}
+
+.time-ntp-status[hidden] {
+    display: none;
+}
+
+#ntp-resync {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: var(--bg-color);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2px 10px;
+    cursor: pointer;
+    transition: var(--transition-theme), transform 0.15s ease;
+}
+
+#ntp-resync:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    background-color: var(--bg-color);
+}
+
+#ntp-resync:active {
+    transform: scale(0.95);
+}
+
 /* Pill Tabs (Protocol Selector) */
 .protocol-pills {
     display: flex;
@@ -625,6 +734,11 @@ canvas {
     .protocol-pill {
         font-size: 0.78rem;
         padding: 6px 12px;
+    }
+
+    .time-source-pill {
+        font-size: 0.72rem;
+        padding: 4px 10px;
     }
 
     #control-button {

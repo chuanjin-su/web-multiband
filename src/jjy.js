@@ -6,8 +6,8 @@ window.TimeProtocols.jjy = (function() {
         new Date(2017, 0, 1, 9)
     ];
 
-    function getleapsecond() {
-        var now = Date.now();
+    function getleapsecond(nowMs) {
+        var now = (typeof nowMs === 'number') ? nowMs : Date.now();
         for(var i = 0; i < plus_leapsecond_list.length; i++) {
             var diff = plus_leapsecond_list[i] - now;
             if (diff > 0 && diff <= 31*24*60*60*1000) return 1;
@@ -23,7 +23,7 @@ window.TimeProtocols.jjy = (function() {
             { text: "Enable DST" }
         ],
 
-        schedule: function(date_loc, ctx, optStates) {
+        schedule: function(date_loc, ctx, optStates, nowMs) {
             // optStates is an array of booleans mapped to our checkboxes above
             var useLocalTime = optStates ? optStates[0] : false;
             var useDST = optStates ? optStates[1] : false;
@@ -37,7 +37,7 @@ window.TimeProtocols.jjy = (function() {
                 date = new Date(dateUTC.getTime() + 9 * 60 * 60 * 1000);
             }
 
-            var now = Date.now();
+            var now = (typeof nowMs === 'number') ? nowMs : Date.now();
 
             // Audio offset must ALWAYS be tied to the local machine's tick, not the shifted timezone
             var start = date_loc.getTime();
@@ -53,7 +53,7 @@ window.TimeProtocols.jjy = (function() {
             var year_day = Math.floor((new Date(fullyear, date.getMonth(), date.getDate()).getTime() - new Date(fullyear, 0, 1).getTime()) / (24*60*60*1000)) + 1;
 
             var array = [];
-            var leapsecond = getleapsecond();
+            var leapsecond = getleapsecond(now);
             var summer_time = useDST; // Map the DST checkbox directly to JJY's logic
 
             function marker(s) {

@@ -26,9 +26,18 @@ To bypass this hardware limitation, this simulator relies on **audio clipping an
 3. This overdriving "clips" the waveform, turning it into a square-like wave that physically emits high-energy electromagnetic **harmonics** (3rd, 4th, or 5th order).
 4. These electromagnetic harmonics hit the exact target frequencies (e.g., $15.5 \text{ kHz} \times 5 = 77.5 \text{ kHz}$) required by your watch's internal antenna.
 
+## Time Source
+
+The simulator needs to know the correct time to encode into the signal. You can pick the source in the time card (below the UTC/DST badges):
+
+* **System time** (default) — uses your device's clock directly. Verify it against [time.is](https://time.is/) or an NTP server such as [pool.ntp.org](https://www.ntppool.org/) first.
+* **NTP synced** — the page fetches time from NTP-synced HTTPS endpoints and estimates your clock's offset with an NTP-style round-trip algorithm: five samples per endpoint, the minimum-RTT sample wins, and endpoints are tried in order (Cloudflare, timeapi.io, WorldTimeAPI, Akamai, jsDelivr, unpkg) until one answers. The offset and error bound are shown in the time card, and the clock re-syncs every 10 minutes, whenever the tab becomes visible again, or manually via **Resync**. If the network is unreachable, it falls back to system time automatically. Typically accurate to ~±100 ms — plenty for radio-controlled watches, which decode whole seconds.
+
+> Browsers cannot send raw NTP (UDP) packets, so the "NTP synced" mode queries HTTPS endpoints that are themselves NTP-disciplined. This is typically accurate to a few tens of milliseconds — well within what a radio-controlled watch needs to decode a frame.
+
 ## How to Use
 
-1. **Verify Time Accuracy:** Ensure your computer's clock is perfectly synced. You can ping a public NTP server or use an online time service.
+1. **Select a Time Source:** Choose **NTP synced** to let the page pull accurate time from the network, or keep **System time** and make sure your device's clock is correct (check [time.is](https://time.is/) or sync against an NTP server).
 2. **Select Protocol:** Choose the time signal your specific watch expects to receive.
 3. **Maximize Volume:** Turn your computer or smartphone volume up to **100%**. This is strictly required to induce the clipping distortion that generates the necessary radio harmonics.
 4. **Position the Watch:** Place your radio-controlled watch as close to the speaker or headphones as possible.

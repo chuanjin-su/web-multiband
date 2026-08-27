@@ -25,7 +25,7 @@ window.TimeProtocols.msf = (function() {
     return {
         name: "MSF (UK)",
 
-        schedule: function(date_loc, ctx) {
+        schedule: function(date_loc, ctx, opts, nowMs) {
             var isDST = isUKDST(date_loc);
             var offsetMs = isDST ? (1 * 60 * 60 * 1000) : 0;
 
@@ -33,7 +33,7 @@ window.TimeProtocols.msf = (function() {
             // MSF must encode the time of the NEXT minute (+ 60,000 ms)
             var dateUK = new Date(date_loc.getTime() + offsetMs + 60000);
 
-            var now = Date.now();
+            var now = (typeof nowMs === 'number') ? nowMs : Date.now();
             var start = date_loc.getTime();
             var offset = (start - now) / 1000 + ctx.currentTime;
 

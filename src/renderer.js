@@ -35,7 +35,7 @@ window.SignalRenderer = (function() {
             return;
         }
 
-        var raw = protocol.formatDate(new Date(), this.getOptionState());
+        var raw = protocol.formatDate(TimeSource.date(), this.getOptionState());
         var parts = raw.split('|').map(function(s) { return s.trim(); });
 
         // First segment: primary time (e.g. "Local (UTC+8): 2026-06-25 14:30:15")
@@ -86,7 +86,7 @@ window.SignalRenderer = (function() {
             return;
         }
 
-        var now = Math.floor(Date.now() / 1000) % 60;
+        var now = Math.floor(TimeSource.now() / 1000) % 60;
 
         // Grid lines
         ctx2d.strokeStyle = '#94a3b8';
@@ -131,7 +131,7 @@ window.SignalRenderer = (function() {
             var row2 = Math.floor(now / 30);
             var curX = (now % 30) * 30;
             var curY = row2 * 100;
-            var progress = (Date.now() % 1000) / 1000;
+            var progress = (TimeSource.now() % 1000) / 1000;
             var lineX = curX + progress * 30;
 
             ctx2d.strokeStyle = 'rgba(255, 255, 255, 0.6)';

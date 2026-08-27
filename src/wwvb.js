@@ -21,8 +21,8 @@ window.TimeProtocols.wwvb = (function() {
     return {
         name: "WWVB (North America)",
 
-        schedule: function(date, ctx) {
-            var now = Date.now();
+        schedule: function(date, ctx, opts, nowMs) {
+            var now = (typeof nowMs === 'number') ? nowMs : Date.now();
             var start = date.getTime();
             var offset = (start - now) / 1000 + ctx.currentTime;
 

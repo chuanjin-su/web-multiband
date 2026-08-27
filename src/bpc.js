@@ -17,8 +17,8 @@ window.TimeProtocols.bpc = (function() {
 
         optionText: "Use Local Time instead of CST (UTC+8)",
 
-        schedule: function(date_loc, ctx, useLocalTime) {
-            var now = Date.now();
+        schedule: function(date_loc, ctx, useLocalTime, nowMs) {
+            var now = (typeof nowMs === 'number') ? nowMs : Date.now();
             var start = date_loc.getTime();
             var offset;
 

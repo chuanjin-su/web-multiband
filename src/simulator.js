@@ -121,9 +121,17 @@
     updateOptionUI();
 
     // 2. Timing and Audio Engine
+    // In NTP mode, make sure the clock offset is fresh before anchoring a broadcast
+    function ensureFreshSync() {
+        if (TimeSource.getMode() !== 'ntp') return Promise.resolve();
+        var st = TimeSource.getStatus();
+        if (st.state === 'ok' && (Date.now() - st.lastSyncAt) < 60 * 1000) return Promise.resolve();
+        return TimeSource.sync();
+    }
+
     function start() {
         ctx = new AudioContext();
-        var now = Date.now();
+        var now = TimeSource.now();
         var t = Math.floor(now / (60 * 1000)) * 60 * 1000;
         var next = t + 60 * 1000;
         var delay = next - now - 1000;
@@ -135,8 +143,8 @@
 
         var protocol = getCurrentProtocol();
 
-        // Pass the checkbox state as the 3rd argument
-        signal = protocol.schedule(new Date(t), ctx, getOptionState());
+        // Pass the checkbox state as the 3rd argument and the corrected clock as the 4th
+        signal = protocol.schedule(new Date(t), ctx, getOptionState(), TimeSource.now());
 
         intervalId = setTimeout(function() {
             interval();
@@ -145,7 +153,7 @@
 
         function interval() {
             t += 60 * 1000;
-            signal = protocol.schedule(new Date(t), ctx, getOptionState());
+            signal = protocol.schedule(new Date(t), ctx, getOptionState(), TimeSource.now());
         }
     }
 
@@ -186,7 +194,7 @@
             play_flag = true;
             canvas_panel.classList.add('visible');
             if (statusLive) statusLive.textContent = "Transmission started";
-            start();
+            ensureFreshSync().then(start);
         }
     });
 
@@ -205,4 +213,93 @@
         renderer.stop();
         _stop();
     };
+
+    // 5. Time Source UI (System time / NTP synced)
+    var timeSourceRow = document.getElementById('time-source');
+    var ntpStatusEl = document.getElementById('time-ntp-status');
+    var ntpTextEl = document.getElementById('ntp-status-text');
+    var ntpResyncBtn = document.getElementById('ntp-resync');
+
+    function setActiveSourcePill(sourceMode) {
+        var pills = timeSourceRow.querySelectorAll('.time-source-pill');
+        pills.forEach(function(p) {
+            var active = p.getAttribute('data-source') === sourceMode;
+            p.classList.toggle('active', active);
+            p.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+    }
+
+    function formatAgo(t) {
+        var s = Math.max(0, Math.round((Date.now() - t) / 1000));
+        if (s < 60) return s + 's ago';
+        var m = Math.floor(s / 60);
+        if (m < 60) return m + 'm ago';
+        return Math.floor(m / 60) + 'h ago';
+    }
+
+    function renderNtpStatus() {
+        var status = TimeSource.getStatus();
+        var isNtp = status.mode === 'ntp';
+        ntpStatusEl.hidden = !isNtp;
+        if (!isNtp) return;
+
+        var stateClass, text;
+        if (status.state === 'syncing') {
+            stateClass = 'ntp-syncing';
+            text = 'NTP: syncing\u2026';
+        } else if (status.state === 'ok') {
+            stateClass = 'ntp-ok';
+            var off = status.offsetMs;
+            text = 'NTP \u00b7 ' + (status.endpoint || '?') + ' ' + (off >= 0 ? '+' : '') + off + ' ms \u00b1' + status.uncertaintyMs +
+                   ' ms \u00b7 synced ' + formatAgo(status.lastSyncAt);
+        } else if (status.state === 'error') {
+            stateClass = 'ntp-error';
+            text = (status.lastSyncAt && (Date.now() - status.lastSyncAt) <= 5 * 60 * 1000)
+                ? 'NTP offline \u2014 using last sync'
+                : 'NTP unavailable \u2014 using system time';
+        } else {
+            stateClass = 'ntp-syncing';
+            text = 'NTP: idle';
+        }
+        ntpStatusEl.className = 'time-ntp-status ' + stateClass;
+        ntpTextEl.textContent = text;
+    }
+
+    timeSourceRow.addEventListener('click', function(e) {
+        var pill = e.target.closest('.time-source-pill');
+        if (!pill) return;
+        TimeSource.setMode(pill.getAttribute('data-source'));
+    });
+
+    ntpResyncBtn.addEventListener('click', function() {
+        TimeSource.sync();
+    });
+
+    // Keep the "synced Xs ago" ticker current
+    setInterval(renderNtpStatus, 1000);
+
+    // Reflect the persisted mode and current status on load
+    setActiveSourcePill(TimeSource.getMode());
+    renderNtpStatus();
+
+    // React to source changes / sync completions. Offsets self-correct at the
+    // next minute boundary (schedule() is re-anchored every minute), so only a
+    // mode switch needs to restart the broadcast.
+    var lastSourceMode = TimeSource.getMode();
+    TimeSource.onChange(function(status) {
+        setActiveSourcePill(status.mode);
+        renderNtpStatus();
+        if (status.mode !== lastSourceMode) {
+            lastSourceMode = status.mode;
+            if (play_flag) {
+                var ready = (status.mode === 'ntp') ? TimeSource.sync() : Promise.resolve();
+                ready.then(function() {
+                    if (play_flag) {
+                        stop();
+                        start();
+                    }
+                });
+            }
+        }
+    });
 })();

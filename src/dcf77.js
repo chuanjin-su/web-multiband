@@ -31,12 +31,12 @@ window.TimeProtocols.dcf77 = (function() {
     return {
         name: "DCF77 (Germany / Europe)",
 
-        schedule: function(date_loc, ctx) {
+        schedule: function(date_loc, ctx, opts, nowMs) {
             var isDST = isCEST(date_loc);
             var offsetMs = isDST ? (2 * 60 * 60 * 1000) : (1 * 60 * 60 * 1000);
             var dateGer = new Date(date_loc.getTime() + offsetMs + 60000);
 
-            var now = Date.now();
+            var now = (typeof nowMs === 'number') ? nowMs : Date.now();
             var start = date_loc.getTime();
             var offset;
 

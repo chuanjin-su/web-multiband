@@ -59,6 +59,18 @@
         <div class="time-primary" id="time-primary">--:--:--</div>
         <div class="time-secondary" id="time-secondary">Select a protocol</div>
         <div class="time-badges" id="time-badges"></div>
+        <div class="time-source" id="time-source">
+          <span class="time-source-label">Time source</span>
+          <button class="time-source-pill" data-source="system" aria-pressed="false">System time</button>
+          <button class="time-source-pill" data-source="ntp" aria-pressed="false">NTP synced</button>
+        </div>
+        <div class="time-ntp-status" id="time-ntp-status" hidden>
+          <span id="ntp-status-text"></span>
+          <button id="ntp-resync" title="Re-sync with the NTP endpoint now" aria-label="Resync NTP time">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            <span>Resync</span>
+          </button>
+        </div>
       </div>
 
       <div class="controls">
@@ -107,7 +119,7 @@
           </button>
           <div class="accordion-body">
             <p>
-              Sync your computer's time with an accurate time source (e.g., <a href="https://time.is/" target="_blank" rel="noopener">time.is</a>, or a NTP server such as <a href="https://www.ntppool.org/" target="_blank" rel="noopener">pool.ntp.org</a>) to ensure the simulator transmits the correct time signals.
+              Pick a <strong>Time source</strong> in the time card (below the UTC/DST badges). <strong>NTP synced</strong> lets the page pull accurate time from the network automatically. If you keep <strong>System time</strong>, make sure your device's clock is accurate — check it against <a href="https://time.is/" target="_blank" rel="noopener">time.is</a> or an NTP server such as <a href="https://www.ntppool.org/" target="_blank" rel="noopener">pool.ntp.org</a> — so the simulator transmits the correct time signals.
             </p>
             <p>
               Use a headphone or the computer's built-in speaker. Maximize the volume for better reception, and place your radio-controlled clock close to the speaker.
@@ -217,6 +229,7 @@
         }
       })();
     </script>
+    <script src="src/clock.js"></script>
     <script src="src/wwvb.js"></script>
     <script src="src/bpc.js"></script>
     <script src="src/jjy.js"></script>
