@@ -49,8 +49,13 @@ window.TimeProtocols.jjy = (function() {
             var year = fullyear % 100;
             var week_day = date.getDay();
 
-            // Safely calculate day of the year avoiding timezone drift
-            var year_day = Math.floor((new Date(fullyear, date.getMonth(), date.getDate()).getTime() - new Date(fullyear, 0, 1).getTime()) / (24*60*60*1000)) + 1;
+            // Day of year of the JST calendar date. Anchor both midnights at
+            // UTC via Date.UTC so the host timezone's DST rules can never make
+            // the day boundary drift: subtracting local-midnight epochs (the
+            // previous approach) lost one hour across spring-forward and made
+            // the transmitted day one day short between the DST transitions.
+            var year_day = Math.floor((Date.UTC(fullyear, date.getMonth(), date.getDate()) -
+                                       Date.UTC(fullyear, 0, 1)) / (24*60*60*1000)) + 1;
 
             var array = [];
             var leapsecond = getleapsecond(now);
