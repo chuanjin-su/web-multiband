@@ -95,7 +95,7 @@ window.SignalRenderer = (function() {
         ctx2d.beginPath();
 
         ctx2d.moveTo(0, 80); ctx2d.lineTo(900, 80);
-        ctx2d.moveTo(0, 180); ctx2d.lineTo(900, 180);
+        ctx2d.moveTo(0, 190); ctx2d.lineTo(900, 190);
 
         for (var tick = 0; tick <= 60; tick++) {
             var row = Math.floor(tick / 30);
@@ -104,12 +104,12 @@ window.SignalRenderer = (function() {
             var x = (tick % 30) * 30;
             if (tick === 60) x = 900;
 
-            var yBase = row === 0 ? 80 : 180;
+            var yBase = row === 0 ? 80 : 190;
 
             ctx2d.moveTo(x, yBase);
             if (tick % 10 === 0) {
                 ctx2d.lineTo(x, yBase + 12);
-                if (tick <= 60) ctx2d.fillText(tick, x + 3, yBase + 26);
+                ctx2d.fillText(tick, x + 3, yBase + 26);
             } else if (tick % 5 === 0) {
                 ctx2d.lineTo(x, yBase + 8);
             } else {
@@ -121,7 +121,7 @@ window.SignalRenderer = (function() {
         for (var i = 0; i < signal.length; i++) {
             var val = signal[i];
             var barX = (i % 30) * 30;
-            var barY = Math.floor(i / 30) * 100;
+            var barY = Math.floor(i / 30) * 110;
 
             protocol.drawBar(ctx2d, val, i, now, barX, barY, 30, 80);
         }
@@ -130,7 +130,7 @@ window.SignalRenderer = (function() {
         if (now < 60) {
             var row2 = Math.floor(now / 30);
             var curX = (now % 30) * 30;
-            var curY = row2 * 100;
+            var curY = row2 * 110;
             var progress = (TimeSource.now() % 1000) / 1000;
             var lineX = curX + progress * 30;
 
