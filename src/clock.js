@@ -21,8 +21,6 @@ window.TimeSource = (function() {
     var SAMPLES = 5;                       // samples per sync
     var MAX_RTT = 1000;                    // reject samples slower than 1 s
     var PROBE_TIMEOUT = 4000;              // per-request abort timeout (ms)
-    var RESYNC_INTERVAL = 10 * 60 * 1000;  // periodic resync while in NTP mode
-    var RETRY_INTERVAL = 30 * 1000;        // quick retry after a failed sync
     var MAX_STALE = 5 * 60 * 1000;         // max age of a usable offset
 
     var mode = 'system';
@@ -33,7 +31,6 @@ window.TimeSource = (function() {
     var endpoint = null;   // name of the endpoint that produced the offset
     var listeners = [];
     var syncing = null;    // in-flight sync promise
-    var resyncTimer = null;
 
     // Restore persisted mode
     try {
@@ -215,12 +212,6 @@ window.TimeSource = (function() {
         return attempt();
     }
 
-    function scheduleResync() {
-        if (resyncTimer) clearTimeout(resyncTimer);
-        if (mode !== 'ntp') return;
-        resyncTimer = setTimeout(sync, state === 'error' ? RETRY_INTERVAL : RESYNC_INTERVAL);
-    }
-
     function sync() {
         if (mode !== 'ntp') return Promise.resolve(getStatus());
         if (syncing) return syncing;
@@ -247,13 +238,11 @@ window.TimeSource = (function() {
             endpoint = result.ep.name;
             state = 'ok';
             notify();
-            scheduleResync();
             settle();
             return getStatus();
         }, function() {
             state = 'error';
             notify();
-            scheduleResync();
             settle();
             return getStatus();
         });
@@ -271,19 +260,14 @@ window.TimeSource = (function() {
         if (m === 'ntp') {
             sync();
         } else {
-            if (resyncTimer) { clearTimeout(resyncTimer); resyncTimer = null; }
             state = 'idle';
         }
         notify();
     }
 
-    // --- Auto resync guards ---
-    document.addEventListener('visibilitychange', function() {
-        if (!document.hidden && mode === 'ntp') sync();
-    });
-    window.addEventListener('online', function() {
-        if (mode === 'ntp') sync();
-    });
+    // Resync is user-initiated only: the "resync" button and switching from
+    // system time back to NTP (setMode('ntp') above). No automatic resync on
+    // tab focus, network reconnect, or a background timer.
 
     // Kick off a sync at load if the persisted mode is NTP
     if (mode === 'ntp') sync();
