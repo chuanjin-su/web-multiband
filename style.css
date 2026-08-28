@@ -230,6 +230,11 @@ a:hover {
     white-space: nowrap;
 }
 
+[data-theme="dark"] .time-source-pill {
+    color: var(--text-muted);
+    background: var(--bg-color);
+}
+
 .time-source-pill:hover {
     color: var(--accent);
     border-color: var(--accent);
