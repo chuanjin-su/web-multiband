@@ -118,18 +118,24 @@ function utc(iso) { return new Date(iso).getTime(); }
   });
 
   // 2026: DST begins Sun Mar 8, 07:00 UTC; ends Sun Nov 1, 06:00 UTC.
-  test('spring transition Sunday sends 10 all day (enhanced format)', () => {
+  // NIST updates bits 57/58 at 00:00 UTC, so the 10/01 transitional codes span
+  // the entire UTC day of the change (00:00Z → 00:00Z), not the local day.
+  test('spring transition Sunday sends 10 for the whole UTC day', () => {
+    assertEq(decode(frame('2026-03-08T00:30Z')).dst, 2, 'start of UTC Sunday');
     assertEq(decode(frame('2026-03-08T06:00Z')).dst, 2, 'before 2:00 local');
     assertEq(decode(frame('2026-03-08T12:00Z')).dst, 2, 'after 2:00 local');
+    assertEq(decode(frame('2026-03-08T23:59Z')).dst, 2, 'end of UTC Sunday');
     assertEq(decode(frame('2026-03-07T12:00Z')).dst, 0, 'Saturday before: plain 00');
-    assertEq(decode(frame('2026-03-09T12:00Z')).dst, 3, 'Monday after: plain 11');
+    assertEq(decode(frame('2026-03-09T00:30Z')).dst, 3, 'Monday after 00:00Z: plain 11');
   });
 
-  test('fall transition Sunday sends 01 all day (enhanced format)', () => {
+  test('fall transition Sunday sends 01 for the whole UTC day', () => {
+    assertEq(decode(frame('2026-11-01T00:30Z')).dst, 1, 'start of UTC Sunday');
     assertEq(decode(frame('2026-11-01T05:00Z')).dst, 1, 'before 2:00 local');
     assertEq(decode(frame('2026-11-01T12:00Z')).dst, 1, 'after 2:00 local');
+    assertEq(decode(frame('2026-11-01T23:59Z')).dst, 1, 'end of UTC Sunday');
     assertEq(decode(frame('2026-10-31T12:00Z')).dst, 3, 'Saturday before: plain 11');
-    assertEq(decode(frame('2026-11-02T12:00Z')).dst, 0, 'Monday after: plain 00');
+    assertEq(decode(frame('2026-11-02T00:30Z')).dst, 0, 'Monday after 00:00Z: plain 00');
   });
 
   test('leap-year bit set in leap years', () => {

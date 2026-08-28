@@ -104,20 +104,24 @@ window.TimeProtocols.wwvb = (function() {
             isLeapYear ? one(55) : zero(55);
             zero(56);
 
-            // Bits 57-58: DST status (NIST enhanced format, 2013).
+            // Bits 57-58: DST status (NIST legacy AM/PWM format, SP 250-67).
             //   00 = standard time, 11 = DST in effect
             //   10 = DST begins today, 01 = DST ends today
-            // The transitional codes replace the plain state during the local
-            // (Eastern) calendar day of the transition Sunday.
+            // NIST updates these bits once a day at 00:00 UTC: bit 57 reflects the
+            // DST state at 24:00 Z (end of the current UTC day) and bit 58 the state
+            // at 00:00 Z (start of the day). The transitional 10/01 codes therefore
+            // span the entire UTC day containing the local 02:00 change — not the
+            // local (Eastern) calendar day.
             var dstState;
             var bounds = dstBounds(fullyear);
             var tMs = date.getTime();
-            var HOUR = 60 * 60 * 1000;
-            // Spring Sunday local day: midnight EST (start - 2h) to midnight EDT (start + 21h)
-            // Fall Sunday local day:   midnight EDT (end - 2h)   to midnight EST (end + 23h)
-            if (tMs >= bounds.start - 2 * HOUR && tMs < bounds.start + 21 * HOUR) {
+            var DAY = 24 * 60 * 60 * 1000;
+            // 00:00Z boundary of the UTC day holding each transition Sunday.
+            var springDay = Math.floor(bounds.start / DAY) * DAY;
+            var fallDay = Math.floor(bounds.end / DAY) * DAY;
+            if (tMs >= springDay && tMs < springDay + DAY) {
                 dstState = 2; // 10: DST begins today
-            } else if (tMs >= bounds.end - 2 * HOUR && tMs < bounds.end + 23 * HOUR) {
+            } else if (tMs >= fallDay && tMs < fallDay + DAY) {
                 dstState = 1; // 01: DST ends today
             } else {
                 dstState = summer_time ? 3 : 0; // 11: DST active / 00: standard
