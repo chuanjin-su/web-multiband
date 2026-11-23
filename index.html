@@ -88,23 +88,12 @@
         <canvas id="canvas" width="1000" height="230"></canvas>
       </div>
 
-      <div class="map-container">
-        <h2>Global Signal Coverage</h2>
-        <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: -5px;">
-          Radio-controlled clocks automatically synchronize to one of these regional longwave transmitters.
-          Select the one that suits your watch's supported frequencies and your location/timezone for the best results.
-        </p>
-
-        <img src="coverage.png" alt="Map of global atomic clock signal coverage" onerror="this.style.display='none'">
-
-        <div class="signal-grid">
-          <div class="signal-card" data-protocol="bpc"><strong>BPC</strong>China<br>68.5 kHz</div>
-          <div class="signal-card" data-protocol="wwvb"><strong>WWVB</strong>USA<br>60 kHz</div>
-          <div class="signal-card" data-protocol="dcf77"><strong>DCF77</strong>Germany<br>77.5 kHz</div>
-          <div class="signal-card" data-protocol="msf"><strong>MSF</strong>UK<br>60 kHz</div>
-          <div class="signal-card" data-protocol="jjy"><strong>JJY</strong>Japan<br>40 & 60 kHz</div>
+      <figure class="coverage-figure" aria-label="Global signal coverage">
+        <div id="coverage-globe" class="coverage-viewport">
+          <p id="coverage-globe-status" role="status">Loading the 3D globe…</p>
         </div>
-      </div>
+        <figcaption id="coverage-stations" class="coverage-stations" aria-live="polite"></figcaption>
+      </figure>
 
       <div class="instructions">
         <div class="accordion">
@@ -189,40 +178,6 @@
           });
         });
 
-        // Clickable signal cards → select protocol pill
-        var cards = document.querySelectorAll('.signal-card');
-        cards.forEach(function(card) {
-          card.addEventListener('click', function() {
-            var proto = this.getAttribute('data-protocol');
-            var pill = document.querySelector('.protocol-pill[data-protocol="' + proto + '"]');
-            if (pill) pill.click();
-          });
-        });
-
-        // Sync active signal card when protocol pill changes
-        var observer = new MutationObserver(function() {
-          var activePill = document.querySelector('.protocol-pill.active');
-          var proto = activePill ? activePill.getAttribute('data-protocol') : null;
-          cards.forEach(function(c) {
-            if (c.getAttribute('data-protocol') === proto) {
-              c.classList.add('active');
-            } else {
-              c.classList.remove('active');
-            }
-          });
-        });
-        var pillsContainer = document.querySelector('.protocol-pills');
-        if (pillsContainer) {
-          observer.observe(pillsContainer, { attributes: true, subtree: true, attributeFilter: ['class'] });
-          // Initial sync
-          var activePill = pillsContainer.querySelector('.protocol-pill.active');
-          if (activePill) {
-            var proto = activePill.getAttribute('data-protocol');
-            cards.forEach(function(c) {
-              if (c.getAttribute('data-protocol') === proto) c.classList.add('active');
-            });
-          }
-        }
       })();
     </script>
     <script src="src/clock.js"></script>
@@ -232,6 +187,8 @@
     <script src="src/msf.js"></script>
     <script src="src/dcf77.js"></script>
     <script src="src/renderer.js"></script>
+    <script src="src/coverage-stations.js"></script>
     <script src="src/simulator.js"></script>
+    <script type="module" src="src/coverage-globe.js"></script>
   </body>
 </html>

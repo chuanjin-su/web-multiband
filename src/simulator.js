@@ -21,39 +21,47 @@
     var AudioContext = window.AudioContext || window.webkitAudioContext;
     var protocolSelector = document.getElementById("protocol-selector");
     var optionContainer = document.getElementById("option");
+    var stations = window.CoverageStations || {};
     var protocols = window.TimeProtocols || {};
 
-    // 1. Dynamically populate pill buttons based on loaded scripts
-    protocolSelector.innerHTML = "";
-    var firstKey = null;
+    // 1. Build the protocol controls.
     for (var key in protocols) {
-        if (!firstKey) firstKey = key;
         var pill = document.createElement("button");
+        pill.type = "button";
         pill.className = "protocol-pill";
-        pill.setAttribute("data-protocol", key);
+        pill.dataset.protocol = key;
         pill.textContent = protocols[key].name;
+
+        if (stations[key]) {
+            var frequency = document.createElement("span");
+            var frequencies = stations[key].map(function(station) { return station.frequency; });
+            frequency.className = "protocol-frequency";
+            frequency.textContent = frequencies.join(" & ") + " kHz";
+            pill.append(" ", frequency);
+        }
+
         protocolSelector.appendChild(pill);
     }
-    // Activate first pill by default
-    if (firstKey) {
-        var firstPill = protocolSelector.querySelector('[data-protocol="' + firstKey + '"]');
-        if (firstPill) firstPill.classList.add('active');
+
+    function setActiveProtocol(selectedPill) {
+        protocolSelector.querySelectorAll(".protocol-pill").forEach(function(pill) {
+            var selected = pill === selectedPill;
+            pill.classList.toggle("active", selected);
+            pill.setAttribute("aria-pressed", selected);
+        });
     }
 
-    // Handle pill activation and protocol switching via event delegation
-    protocolSelector.addEventListener('click', function(e) {
-        var pill = e.target.closest('.protocol-pill');
+    setActiveProtocol(protocolSelector.firstElementChild);
+
+    protocolSelector.addEventListener("click", function(e) {
+        var pill = e.target.closest(".protocol-pill");
         if (!pill) return;
 
-        // Update active pill visual state
-        var pills = protocolSelector.querySelectorAll('.protocol-pill');
-        pills.forEach(function(p) { p.classList.remove('active'); });
-        pill.classList.add('active');
-
-        // Rebuild option UI for the new protocol
+        var key = pill.dataset.protocol;
+        setActiveProtocol(pill);
         updateOptionUI();
+        protocolSelector.dispatchEvent(new CustomEvent("protocolchange", { detail: key }));
 
-        // Restart transmission if currently playing
         if (play_flag) {
             stop();
             start();

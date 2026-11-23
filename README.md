@@ -14,7 +14,11 @@ This simulator supports the major global time signal stations:
 * **MSF (UK):** 60 kHz (20 kHz square wave, 3rd harmonic)
 * **JJY (Japan):** 40 kHz (13.333 kHz square wave, 3rd harmonic)
 
-![](coverage.png)
+### Global Signal Coverage
+
+Select a protocol to rotate the 3D globe to its transmitter. Pins mark transmitter locations, and the shaded circles show approximate reception radii. JJY shows both Japanese transmitters, while the simulator emits the 40 kHz variant.
+
+The WWVB radius follows the original coverage diagram, and [NIST's coverage maps](https://tf.nist.gov/stations/wwvbcoverage.htm) show how it varies over the day. BPC and JJY radii follow [Seiko's reception guide](https://www.seikowatches.com/instructions/html/SEIKO_8B63_EN/CWVVSYxxhbpilh). DCF77 and MSF radii follow [PTB](https://www.ptb.de/cms/fileadmin/internet/publikationen/broschueren/About_Time_2013.pdf) and [NPL](https://www.npl.co.uk/getattachment/f6fc6304-5a88-4d5c-b1ae-e030c432a9a8/msf-reception-problems-nov18.pdf), respectively. Coastlines are derived from [Natural Earth 1:110m land data, v5.1.2](https://github.com/nvkelso/natural-earth-vector/blob/v5.1.2/geojson/ne_110m_land.geojson).
 
 ## How It Works
 
