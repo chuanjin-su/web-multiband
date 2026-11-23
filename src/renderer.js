@@ -91,7 +91,7 @@ window.SignalRenderer = (function() {
         // Grid lines
         ctx2d.strokeStyle = '#94a3b8';
         ctx2d.fillStyle = '#94a3b8';
-        ctx2d.font = '11px "Inter", -apple-system, sans-serif';
+        ctx2d.font = '11px "Computer Modern Sans", Arial, sans-serif';
         ctx2d.beginPath();
 
         ctx2d.moveTo(0, 80); ctx2d.lineTo(900, 80);
