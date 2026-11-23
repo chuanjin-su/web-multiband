@@ -422,6 +422,12 @@ canvas {
     inset: 0;
     width: 100%;
     height: 100%;
+    cursor: grab;
+    touch-action: pinch-zoom;
+}
+
+.coverage-viewport canvas.dragging {
+    cursor: grabbing;
 }
 
 .coverage-viewport p {

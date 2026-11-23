@@ -11,7 +11,11 @@ let focusGlobe;
 
 function updateCoverage(protocol) {
     const transmitters = stations[protocol];
-    if (!transmitters || protocol === activeProtocol) return;
+    if (!transmitters) return;
+    if (protocol === activeProtocol) {
+        focusGlobe?.(protocol);
+        return;
+    }
     activeProtocol = protocol;
 
     const details = transmitters.map(station => {
@@ -48,7 +52,8 @@ Promise.all([
 function createGlobe(THREE, land) {
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'low-power' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.domElement.setAttribute('aria-hidden', 'true');
+    const canvas = renderer.domElement;
+    canvas.setAttribute('aria-hidden', 'true');
 
     const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);
@@ -73,11 +78,12 @@ function createGlobe(THREE, land) {
 
     const fill = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.24, depthWrite: false });
     const outline = new THREE.LineBasicMaterial();
-    const pin = new THREE.SpriteMaterial({ map: pinTexture(THREE), depthWrite: false });
+    const pin = new THREE.SpriteMaterial({ map: pinTexture(THREE), depthTest: false, depthWrite: false });
     const regions = new Map();
 
     for (const [protocol, transmitters] of Object.entries(stations)) {
         const overlay = new THREE.Group();
+        const markers = [];
         const center = new THREE.Vector3();
         for (const station of transmitters) {
             const lat = THREE.MathUtils.degToRad(station.lat);
@@ -97,20 +103,24 @@ function createGlobe(THREE, land) {
             marker.scale.set(0.105, 0.131, 1);
             marker.renderOrder = 1;
             overlay.add(marker);
+            markers.push(marker);
         }
-        const north = new THREE.Vector3(0, 1, 0);
-        const view = new THREE.Matrix4().lookAt(center.normalize(), world.position, north);
-        const rotation = new THREE.Quaternion().setFromRotationMatrix(view).invert();
+        const target = new THREE.Spherical().setFromVector3(center);
         overlay.visible = false;
         world.add(overlay);
-        regions.set(protocol, { overlay, rotation });
+        regions.set(protocol, { overlay, target, markers });
     }
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let animation;
     let activeRegion;
+    const markerPosition = new THREE.Vector3();
 
     function render() {
+        // Keep pins legible on the near hemisphere and hide stations behind the globe.
+        activeRegion?.markers.forEach(marker => {
+            marker.visible = markerPosition.copy(marker.position).applyQuaternion(world.quaternion).z > 0;
+        });
         renderer.render(scene, camera);
     }
 
@@ -140,7 +150,49 @@ function createGlobe(THREE, land) {
         render();
     }
 
-    viewport.append(renderer.domElement);
+    const view = new THREE.Spherical(1, Math.PI / 2, 0);
+    let drag;
+
+    function setView(phi, theta) {
+        view.set(1, phi, theta).makeSafe();
+        // Apply longitude before latitude and keep roll at zero, even near the poles.
+        world.rotation.set(Math.PI / 2 - view.phi, -view.theta, 0, 'XYZ');
+        render();
+    }
+
+    function endDrag() {
+        if (!drag) return;
+        const { id } = drag;
+        drag = null;
+        canvas.classList.remove('dragging');
+        if (canvas.hasPointerCapture(id)) canvas.releasePointerCapture(id);
+    }
+
+    canvas.addEventListener('pointerdown', event => {
+        if (!event.isPrimary || event.button !== 0) return;
+        cancelAnimationFrame(animation);
+        drag = { id: event.pointerId, x: event.clientX, y: event.clientY };
+        canvas.setPointerCapture(event.pointerId);
+        canvas.classList.add('dragging');
+    });
+
+    canvas.addEventListener('pointermove', event => {
+        if (event.pointerId !== drag?.id) return;
+        const dx = event.clientX - drag.x;
+        const dy = event.clientY - drag.y;
+        drag.x = event.clientX;
+        drag.y = event.clientY;
+        if (!dx && !dy) return;
+
+        const radiansPerPixel = (camera.top - camera.bottom) / canvas.clientHeight;
+        setView(view.phi - dy * radiansPerPixel, view.theta - dx * radiansPerPixel);
+    });
+
+    canvas.addEventListener('lostpointercapture', event => {
+        if (event.pointerId === drag?.id) endDrag();
+    });
+
+    viewport.append(canvas);
     setPalette();
     resize();
     new ResizeObserver(resize).observe(viewport);
@@ -151,24 +203,26 @@ function createGlobe(THREE, land) {
 
     return (protocol, animate = true) => {
         const region = regions.get(protocol);
+        endDrag();
         cancelAnimationFrame(animation);
         if (activeRegion) activeRegion.overlay.visible = false;
         region.overlay.visible = true;
         activeRegion = region;
 
+        const { phi, theta } = region.target;
         if (!animate || reducedMotion.matches) {
-            world.quaternion.copy(region.rotation);
-            render();
+            setView(phi, theta);
             return;
         }
 
-        const start = world.quaternion.clone();
+        const startPhi = view.phi;
+        const startTheta = view.theta;
+        const deltaTheta = THREE.MathUtils.euclideanModulo(theta - startTheta + Math.PI, 2 * Math.PI) - Math.PI;
         const startedAt = performance.now();
         function step(now) {
             const progress = Math.min((now - startedAt) / 720, 1);
             const eased = progress * progress * (3 - 2 * progress);
-            world.quaternion.slerpQuaternions(start, region.rotation, eased);
-            render();
+            setView(THREE.MathUtils.lerp(startPhi, phi, eased), startTheta + deltaTheta * eased);
             if (progress < 1) animation = requestAnimationFrame(step);
         }
         animation = requestAnimationFrame(step);
